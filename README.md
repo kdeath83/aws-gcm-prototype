@@ -94,6 +94,39 @@ As organizations deploy more autonomous AI agents, they hit a wall: the agents w
 
 GCM makes those structural failures visible — and fixable.
 
+## 🚀 Deploy to AWS
+
+### Option 1: GitHub Actions (Recommended)
+Fork this repo, add AWS credentials as GitHub secrets, and push to `main`:
+
+```yaml
+AWS_ACCESS_KEY_ID: your-access-key
+AWS_SECRET_ACCESS_KEY: your-secret-key
+AWS_REGION: us-east-1
+```
+
+### Option 2: Local One-Click
+```bash
+chmod +x scripts/one-click-deploy.sh
+./scripts/one-click-deploy.sh
+```
+
+### Option 3: Manual SAM
+```bash
+cd backend
+sam build
+sam deploy --guided --parameter-overrides Environment=prod
+```
+
+### Post-Deployment
+Get your WebSocket URL:
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gcm-prototype-prod \
+  --query 'Stacks[0].Outputs[?OutputKey==`WebSocketEndpoint`].OutputValue' \
+  --output text
+```
+
 ## Acknowledgments
 
 This work is inspired by conversations with **Gregor Wegener** on the [next frontier of governable capability](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/). His framing of runtime control coherence, structural waste, and execution reconstructability shaped the principles implemented here.
