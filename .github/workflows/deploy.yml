@@ -1,0 +1,56 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Setup SAM CLI
+      uses: aws-actions/setup-sam@v2
+
+    - name: SAM Build
+      run: |
+        cd backend
+        sam build
+
+    - name: SAM Deploy
+      run: |
+        cd backend
+        sam deploy \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --stack-name gcm-prototype-prod \
+          --parameter-overrides Environment=prod \
+          --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND
+
+    - name: Get Outputs
+      run: |
+        cd backend
+        echo "WebSocket URL:"
+        aws cloudformation describe-stacks \
+          --stack-name gcm-prototype-prod \
+          --query 'Stacks[0].Outputs[?OutputKey==`WebSocketEndpoint`].OutputValue' \
+          --output text
