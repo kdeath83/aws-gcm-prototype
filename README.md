@@ -1,24 +1,37 @@
-# Governable Capability Monitor (GCM) Prototype
+# Governable Capability Monitor (GCM)
 
-**AWS-native AI governance demonstration showcasing the four principles of Governable Capability.**
+**Exploring the next frontier of AI governance: structural boundaries for productive capability.**
 
-> ⚠️ **Security Remediation Complete**: All 13 critical security/logic/performance issues identified in code review have been fixed. See [REMEDIATION.md](REMEDIATION.md) for details.
+This prototype is inspired by the thinking of [Gregor Wegener](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/) on *Governable Capability* — the recognition that AI systems need runtime control coherence, not just capability benchmarks, to remain productive in deployment.
 
-## Principles
+## The Core Insight
 
-1. **Runtime Control Coherence** — Detect conflicting control loops between schedulers, policy layers, and circuit breakers
-2. **Tool-Call Graph Monitoring** — Visualize expanding tool chains and detect expansion without progress  
-3. **Structural Waste Detection** — Measure the gap between model capability and system productivity
-4. **Execution Reconstruction** — Full audit trail with replay capability for multi-step planning
+> "The gap between model capability and system productivity is structural, not algorithmic."
 
-## Architecture
+Raw capability without governance decays into latency, waste, and audit failure. GCM surfaces the structural dynamics that make capable agents unproductive — and provides the observability layer to fix them.
+
+**[Read the full philosophy →](docs/PHILOSOPHY.md)**
+
+## Four Principles of Governable Capability
+
+1. **Runtime Control Coherence** — When schedulers, policy layers, and circuit breakers conflict, the system becomes unpredictable. GCM detects these control loop collisions in real-time.
+
+2. **Tool-Call Graph Monitoring** — Agents can expand their tool invocation graphs without making progress. GCM visualizes these expansion-without-progress patterns before they become infinite loops.
+
+3. **Structural Waste Detection** — The gap between benchmarked capability and realized productivity is measurable. GCM quantifies activation degradation — where capability exists but doesn't translate to output.
+
+4. **Execution Reconstruction** — Multi-step planning requires auditability. GCM captures full execution traces with decision rationale, enabling compliance-ready reconstruction of any agent decision.
+
+## Architecture: AWS-Native by Design
+
+GCM is built entirely on AWS managed services — no external dependencies, no infrastructure to maintain.
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  DEMO AGENT (Bedrock AgentCore)                          │
-│  • Simulated loan approval agent with 4 failure modes     │
+│  AGENT (Bedrock AgentCore)                               │
+│  • Loan approval demo with 4 failure scenarios          │
 └────────────────┬───────────────────────────────────────────┘
-                 │ EventBridge
+                 │ EventBridge (real-time events)
 ┌────────────────▼───────────────────────────────────────────┐
 │  GCM CONTROL PLANE (Serverless)                          │
 │  ┌──────────────┬──────────────┬──────────────┐           │
@@ -27,45 +40,41 @@
 │  │ (Lambda)     │ (Lambda)     │ (Lambda)     │           │
 │  └──────────────┴──────────────┴──────────────┘           │
 │  ┌──────────────────────────────────────────┐             │
-│  │ Reconstructor (DynamoDB + S3)            │             │
+│  │ Reconstructor (DynamoDB Streams + S3)      │             │
 │  └──────────────────────────────────────────┘             │
 └────────────────────────────────────────────────────────────┘
-                 │
+                 │ WebSocket API
 ┌────────────────▼───────────────────────────────────────────┐
 │  DASHBOARD (React + CloudFront)                          │
-│  • 4 Principle tabs (live updates)                        │
-│  • Demo playback controls                                 │
-│  • Before/after comparison                                │
+│  • Live principle tabs with drill-down                   │
+│  • Execution replay with pause/inspect                   │
+│  • Before/after comparison mode                          │
 └────────────────────────────────────────────────────────────┘
 ```
 
-## Quick Deploy
+## Quick Start
 
 ```bash
 cd backend
 sam build
 sam deploy --guided --parameter-overrides Environment=dev
+
+# Get WebSocket URL for dashboard
+aws cloudformation describe-stacks \
+  --stack-name gcm-prototype-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`WebSocketEndpoint`].OutputValue' \
+  --output text
 ```
 
-## Security Features
+## Why This Matters
 
-- ✅ KMS encryption at rest (DynamoDB, S3, EventBridge, SQS)
-- ✅ Input validation with JSON Schema
-- ✅ Least-privilege IAM policies
-- ✅ Dead Letter Queue (DLQ) for failed processing
-- ✅ Idempotency keys for stream processing
-- ✅ No hardcoded credentials
-- ✅ S3 public access blocked
+As organizations deploy more autonomous AI agents, they hit a wall: the agents work in development but fail in production. Not because the models are wrong, but because the governance structure around them is incoherent.
 
-## Demo Script
+GCM makes those structural failures visible — and fixable.
 
-See `docs/demo-script.md` for the full walkthrough.
+## Acknowledgments
 
-## Documentation
-
-- [REMEDIATION.md](REMEDIATION.md) - Security & performance fixes applied
-- [SAM Template](backend/template.yaml) - Infrastructure as Code
-- [Lambda Functions](backend/src/) - GCM principle implementations
+This work is inspired by conversations with **Gregor Wegener** on the [next frontier of governable capability](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/). His framing of runtime control coherence, structural waste, and execution reconstructability shaped the principles implemented here.
 
 ## License
 

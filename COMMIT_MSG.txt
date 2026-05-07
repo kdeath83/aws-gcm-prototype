@@ -1,0 +1,7 @@
+feat: update README with Governable Capability framing and Gregor Wegener attribution
+
+- Reframed as "next frontier of AI governance"
+- Added Core Insight quote on structural vs algorithmic gaps
+- Four principles aligned with Gregor's thinking
+- Professional acknowledgments section
+- Removed remediation references
