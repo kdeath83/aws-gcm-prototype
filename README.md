@@ -6,30 +6,6 @@
 
 This prototype is inspired by the thinking of [Gregor Wegener](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/) on *Governable Capability* — the recognition that AI systems need runtime control coherence, not just capability benchmarks, to remain productive in deployment.
 
-## 🚀 One-Click Deploy to AWS
-
-### Option 1: GitHub Actions (Recommended)
-Fork this repo, add AWS credentials as GitHub secrets, and push to `main`:
-
-```yaml
-AWS_ACCESS_KEY_ID: your-access-key
-AWS_SECRET_ACCESS_KEY: your-secret-key
-AWS_REGION: us-east-1
-```
-
-### Option 2: Local One-Click
-```bash
-chmod +x scripts/one-click-deploy.sh
-./scripts/one-click-deploy.sh
-```
-
-### Option 3: Manual SAM
-```bash
-cd backend
-sam build
-sam deploy --guided --parameter-overrides Environment=prod
-```
-
 ## The Core Insight
 
 > "The gap between model capability and system productivity is structural, not algorithmic."
