@@ -1,0 +1,312 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Governable Capability Monitor (GCM) Prototype - REMEDIATED
+# Fixes: Encryption (3), Least-privilege IAM (4), Provisioned concurrency (11), DLQ (8)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.11
+    Architectures:
+      - arm64
+    ProvisionedConcurrencyConfig:
+      ProvisionedConcurrentExecutions: 2  # Fix 11: Cold start optimization
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  # KMS Key for encryption (Fix 3)
+  GCMKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for GCM data encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+
+  GCMKMSAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/gcm-${Environment}
+      TargetKeyId: !Ref GCMKMSKey
+
+  GCMEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub gcm-agent-events-${Environment}
+      KmsKeyIdentifier: !Ref GCMKMSKey
+
+  ExecutionTracesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub gcm-execution-traces-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: executionId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: executionId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !Ref GCMKMSKey
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  TraceArchiveBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub gcm-trace-archive-${AWS::AccountId}-${Environment}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref GCMKMSKey
+              BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+          - Id: TransitionToGlacier
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 90
+          - Id: ExpireOldTraces
+            Status: Enabled
+            ExpirationInDays: 365
+
+  GCMDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub gcm-dlq-${Environment}
+      KmsMasterKeyId: !Ref GCMKMSKey
+      MessageRetentionPeriod: 1209600
+
+  CoherenceDetectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub gcm-coherence-detector-${Environment}
+      CodeUri: src/coherence-detector/
+      Handler: app.handler
+      Description: Detects runtime control coherence issues
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt GCMDLQ.Arn
+      Environment:
+        Variables:
+          TRACES_TABLE: !Ref ExecutionTracesTable
+          EVENT_BUS: !Ref GCMEventBus
+          LOG_LEVEL: INFO
+      Events:
+        AgentExecutionEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref GCMEventBus
+            Pattern:
+              source:
+                - gcm.agent.execution
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource: !GetAtt ExecutionTracesTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !GetAtt GCMEventBus.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: !GetAtt GCMKMSKey.Arn
+
+  ToolCallTracerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub gcm-tool-call-tracer-${Environment}
+      CodeUri: src/tool-call-tracer/
+      Handler: app.handler
+      Description: Traces tool-call graph expansion
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt GCMDLQ.Arn
+      Environment:
+        Variables:
+          TRACES_TABLE: !Ref ExecutionTracesTable
+          EVENT_BUS: !Ref GCMEventBus
+          LOG_LEVEL: INFO
+      Events:
+        ToolInvocationEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref GCMEventBus
+            Pattern:
+              source:
+                - gcm.agent.tool
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource: !GetAtt ExecutionTracesTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !GetAtt GCMEventBus.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: !GetAtt GCMKMSKey.Arn
+
+  WasteMeterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub gcm-waste-meter-${Environment}
+      CodeUri: src/waste-meter/
+      Handler: app.handler
+      Description: Measures structural waste and capability gaps
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt GCMDLQ.Arn
+      Environment:
+        Variables:
+          TRACES_TABLE: !Ref ExecutionTracesTable
+          LOG_LEVEL: INFO
+      Events:
+        ExecutionCompleteEvent:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref GCMEventBus
+            Pattern:
+              source:
+                - gcm.agent.complete
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource: !GetAtt ExecutionTracesTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: !GetAtt GCMKMSKey.Arn
+
+  ReconstructorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub gcm-reconstructor-${Environment}
+      CodeUri: src/reconstructor/
+      Handler: app.handler
+      Description: Reconstructs execution traces for audit
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt GCMDLQ.Arn
+      Environment:
+        Variables:
+          TRACES_TABLE: !Ref ExecutionTracesTable
+          ARCHIVE_BUCKET: !Ref TraceArchiveBucket
+          LOG_LEVEL: INFO
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt ExecutionTracesTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 50
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetRecords
+                - dynamodb:GetShardIterator
+                - dynamodb:DescribeStream
+                - dynamodb:ListStreams
+              Resource: !GetAtt ExecutionTracesTable.StreamArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+              Resource: !GetAtt ExecutionTracesTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource: !Sub ${TraceArchiveBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: !GetAtt GCMKMSKey.Arn
+
+Outputs:
+  EventBusName:
+    Description: EventBridge Bus for GCM
+    Value: !Ref GCMEventBus
+    Export:
+      Name: !Sub ${AWS::StackName}-EventBus
+  TracesTable:
+    Description: DynamoDB Table for Execution Traces
+    Value: !Ref ExecutionTracesTable
+    Export:
+      Name: !Sub ${AWS::StackName}-TracesTable
+  ArchiveBucket:
+    Description: S3 Bucket for Trace Archives
+    Value: !Ref TraceArchiveBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-ArchiveBucket
+  KMSKeyId:
+    Description: KMS Key for encryption
+    Value: !Ref GCMKMSKey
+    Export:
+      Name: !Sub ${AWS::StackName}-KMSKey

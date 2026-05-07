@@ -1,0 +1,56 @@
+{
+  "agentName": "gcm-demo-loan-agent",
+  "description": "Demo agent for Governable Capability Monitor - simulates loan approval with 4 failure modes",
+  "idleSessionTTLInSeconds": 1800,
+  "foundationModel": "anthropic.claude-3-sonnet-20240229-v1:0",
+  "instruction": "You are a loan approval assistant. Your job is to analyze loan applications and provide approval recommendations.\n\nIMPORTANT: You have access to several tools to help with this task.\n\nWhen analyzing a loan application:\n1. Check the applicant's credit score using the credit_check tool\n2. Verify their income using the income_verification tool\n3. Calculate debt-to-income ratio using the dti_calculator tool\n4. Assess property value using the property_valuation tool\n\nProvide a clear recommendation: APPROVE, DECLINE, or REVIEW with supporting rationale.",
+  "actionGroups": [
+    {
+      "actionGroupName": "LoanAnalysisTools",
+      "description": "Tools for analyzing loan applications",
+      "actionGroupExecutor": {
+        "lambda": "arn:aws:lambda:REGION:ACCOUNT_ID:function:gcm-demo-loan-tools"
+      },
+      "apiSchema": {
+        "s3": {
+          "s3BucketName": "gcm-demo-agent-schemas",
+          "s3ObjectKey": "loan-tools-schema.json"
+        }
+      }
+    }
+  ],
+  "guardrailConfiguration": {
+    "guardrailIdentifier": "gcm-demo-guardrails",
+    "guardrailVersion": "1"
+  },
+  "gcmIntegration": {
+    "eventBus": "gcm-agent-events",
+    "enableTracing": true,
+    "failureScenarios": [
+      {
+        "name": "coherence_break",
+        "description": "Simulates conflicting control loops between scheduler and guardrails",
+        "trigger": "loan_amount > 1000000",
+        "behavior": "Rapidly alternate between ALLOW and BLOCK decisions"
+      },
+      {
+        "name": "tool_explosion",
+        "description": "Simulates expanding tool-call graph without progress",
+        "trigger": "applicant_credit_score < 600",
+        "behavior": "Recursively call verification tools 20+ times"
+      },
+      {
+        "name": "waste_accumulation",
+        "description": "Simulates high cost with minimal output",
+        "trigger": "complex_application = true",
+        "behavior": "Use maximum tokens per call, generate redundant analysis"
+      },
+      {
+        "name": "audit_failure",
+        "description": "Simulates non-reconstructable execution",
+        "trigger": "random() < 0.1",
+        "behavior": "Skip trace logging for random decision points"
+      }
+    ]
+  }
+}
