@@ -85,7 +85,8 @@ function App() {
       <main>{renderTab()}</main>
       
       <footer>
-        <p>GCM Prototype — AWS Native AI Governance</p>
+        <p>GCM Prototype — AI.04.S1-aligned / AI.30-aligned / AI.47 documentation-level</p>
+        <p><small>Diagnostic references from <a href="https://independent-research-systems-modeling.com/catalog.html" target="_blank" rel="noopener noreferrer">SORT-AI public catalog</a></small></p>
       </footer>
     </div>
   );

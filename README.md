@@ -103,9 +103,28 @@ aws cloudformation describe-stacks \
   --output text
 ```
 
+## SORT-AI Alignment
+
+This prototype aligns conceptually with the [SORT-AI application catalog](https://independent-research-systems-modeling.com/catalog.html) developed by Gregor Wegener. These alignments are diagnostic references that strengthen the prototype's semantic precision without claiming full framework implementation.
+
+| GCM Module | SORT-AI Alignment | Stage |
+|------------|-------------------|-------|
+| **Coherence Detector** | AI.04.S1-aligned — Explicit runtime control conflict | Stage 1 (current) |
+| **Reconstructor** | AI.30-aligned — Structural stability evidence pack | Stage 1 (current) |
+| **Waste Meter** | AI.47 documentation-level — Capability-productivity divergence | Stage 1 (current) |
+| **Cross-Module** | AI.52 candidate — Weak-signal aggregation | Future hardening |
+| **Dashboard** | SOV.03/SOV.05 — Auditability and decision-translation surfaces | Stage 2 (limited) |
+
+**Three Regimes of Runtime Control Coherence:**
+- **S1 (Explicit Conflict):** Scheduler collisions, policy contradictions, circuit-breaker abuse — *implemented*
+- **S2 (Hidden Amplification):** Retry cost inflation behind nominal success rates — *documented as future hardening*
+- **S3 (SLA-Adjacent Oscillation):** Reactive control loops near service boundaries — *documented as future hardening*
+
+**Attribution:** These are diagnostic references derived from public SORT-AI material, not claims of full framework implementation or broader usage rights.
+
 ## Acknowledgments
 
-This work is inspired by conversations with **Gregor Wegener** on the [next frontier of governable capability](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/). His framing of runtime control coherence, structural waste, and execution reconstructability shaped the principles implemented here.
+This work is inspired by conversations with **Gregor Wegener** on the [next frontier of governable capability](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/). His framing of runtime control coherence, structural waste, and execution reconstructability shaped the principles implemented here. The [SORT-AI application catalog](https://independent-research-systems-modeling.com/catalog.html) provides the diagnostic alignment framework referenced above.
 
 ## License
 
