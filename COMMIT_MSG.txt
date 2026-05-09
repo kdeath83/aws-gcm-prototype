@@ -1,7 +1,27 @@
-feat: update README with Governable Capability framing and Gregor Wegener attribution
+feat: implement Gregor Wegener Stage 1 feedback — SORT-AI alignment
 
-- Reframed as "next frontier of AI governance"
-- Added Core Insight quote on structural vs algorithmic gaps
-- Four principles aligned with Gregor's thinking
-- Professional acknowledgments section
-- Removed remediation references
+Based on feedback from Gregor Wegener (Conceptual Architecture Note, May 2026):
+
+Stage 1 Implemented:
+- AI.04.S1-aligned: Coherence Detector docstrings (explicit runtime control conflict)
+- AI.30-aligned: Reconstructor docstrings (structural stability evidence pack)
+- AI.47 documentation-level: Waste Meter (capability-productivity divergence)
+- AI.52 documented: Future hardening candidate (weak-signal aggregation)
+- SOV.03/SOV.05: Dashboard auditability and decision-translation surfaces
+
+New Documentation:
+- README: SORT-AI alignment table with three coherence regimes (S1/S2/S3)
+- docs/FUTURE-HARDENING.md: Three-stage hardening model (Stage 1/2/3)
+- Three coherence regimes documented: S1 (implemented), S2/S3 (future)
+
+Attribution Hygiene:
+- Explicit framing as diagnostic references, not full SORT-AI implementation
+- Link to public application catalog (independent-research-systems-modeling.com)
+- Code-level labels: AI.XX-aligned in docstrings, neutral operational logs
+
+Boundary Notes:
+- S2 (hidden retry amplification): Documented as future hardening
+- S3 (SLA-adjacent oscillation): Documented as future hardening
+- AI.52: Fifth-module candidate, not current scope
+- Stage 2 semantic hardening: Limited scope, not current priority
+- Stage 3 formal diagnosis: Not current scope

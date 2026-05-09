@@ -124,7 +124,7 @@ This prototype aligns conceptually with the [SORT-AI application catalog](https:
 
 ## Acknowledgments
 
-This work is inspired by conversations with **Gregor Wegener** on the [next frontier of governable capability](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/). His framing of runtime control coherence, structural waste, and execution reconstructability shaped the principles implemented here. The [SORT-AI application catalog](https://independent-research-systems-modeling.com/catalog.html) provides the diagnostic alignment framework referenced above.
+This work is inspired by conversations with **Gregor Wegener** on the [next frontier of governable capability](https://www.linkedin.com/pulse/next-frontier-governable-capability-gregor-wegener-mdt0f/). His framing of runtime control coherence, structural waste, and execution reconstructability shaped the principles implemented here. The [SORT-AI application catalog](https://independent-research-systems-modeling.com/catalog.html) provides the diagnostic alignment framework referenced above. The [SORT-AI application catalog](https://independent-research-systems-modeling.com/catalog.html) provides the diagnostic alignment framework referenced above.
 
 ## License
 
